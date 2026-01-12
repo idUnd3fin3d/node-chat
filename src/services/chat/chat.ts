@@ -10,6 +10,7 @@ import type { UserId, WatcherId, SubscribeAction, CallbackForAction, WildcardSub
 export const CHAT_SUBSCRIBE_TYPES = {
   NEW_MESSAGES: 'NEW_MESSAGES',
   CHAT_UPDATED: 'CHAT_UPDATED',
+  CLOSE_WATCHERS_BY_META_KEY: 'CLOSE_WATCHERS_BY_META_KEY',
 } as const;
 type ChatSubscribeTypes = typeof CHAT_SUBSCRIBE_TYPES;
 
@@ -22,7 +23,11 @@ export type ChatChatUpdatedSubscribeAction = SubscribeAction<
   ChatSubscribeTypes['CHAT_UPDATED'],
   CommonPayload & { onlyForJoined: boolean }
 >;
-export type ChatSubscribeActions = ChatNewMessagesSubscribeAction | ChatChatUpdatedSubscribeAction;
+export type ChatCloseWatchersByMetaKeyAction = SubscribeAction<
+  ChatSubscribeTypes['CLOSE_WATCHERS_BY_META_KEY'],
+  CommonPayload & { key: keyof WatcherMeta; value: string }
+>;
+export type ChatSubscribeActions = ChatNewMessagesSubscribeAction | ChatChatUpdatedSubscribeAction | ChatCloseWatchersByMetaKeyAction;
 
 export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
   id: string;
@@ -177,6 +182,12 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
     }
 
     return await chatsModel.getMessagesSlice(this.id, -pageSize);
+  }
+
+  closeWatchersByMetaKey(key: keyof WatcherMeta, value: string): void {
+    this._broadcast(CHAT_SUBSCRIBE_TYPES.CLOSE_WATCHERS_BY_META_KEY, { chatId: this.id, key, value });
+
+    return super.closeWatchersByMetaKey(key, value);
   }
 
   async _closeChat(): Promise<void> {

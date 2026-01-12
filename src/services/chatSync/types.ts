@@ -1,6 +1,6 @@
 import type { ChatSubscribeActions, ManagerSubscribeActions } from '@/services/chat';
 
-export type SyncData = (
+export type SyncPayload =
   | {
       source: 'manager';
       action: ManagerSubscribeActions;
@@ -8,7 +8,8 @@ export type SyncData = (
   | {
       source: 'chat';
       action: ChatSubscribeActions;
-    }
-) & {
+    };
+
+export type SyncData = SyncPayload & {
   instanceId: string;
 };

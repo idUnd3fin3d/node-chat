@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { Chat } from '@/services/chat';
 import type { ManagerSubscribeActions, ChatSubscribeActions, Manager } from '@/services/chat';
 import { isObject } from '@/utils/common';
-import type { SyncData } from './types';
+import type { SyncData, SyncPayload } from './types';
 
 function assertIsSyncData(data: unknown): asserts data is SyncData {
   if (isObject(data) && typeof data.instanceId === 'string' && typeof data.source === 'string' && typeof isObject(data.action)) {
@@ -43,8 +43,9 @@ export class ChatSyncService {
     await this._subscribe(this._subscribeHandler.bind(this));
   }
 
-  _publish(data: SyncData) {
-    this._publisher.publish(this._channelName, JSON.stringify(data));
+  _publish(data: SyncPayload) {
+    const syncData: SyncData = { ...data, instanceId: this.instanceId };
+    this._publisher.publish(this._channelName, JSON.stringify(syncData));
   }
   _subscribe(cb: (data: SyncData) => void) {
     this._subscriber.subscribe(this._channelName, (data: string) => {
@@ -74,10 +75,13 @@ export class ChatSyncService {
           this._chatsManager.getChat(id)?.subscribe('*', this._chatHandler.bind(this));
         });
 
-        this._publish({ source: 'manager', action, instanceId: this.instanceId });
+        this._publish({ source: 'manager', action });
         break;
       }
       case 'CHAT_UPDATED':
+        break;
+      case 'CLOSE_WATCHERS_BY_META_KEY':
+        this._publish({ source: 'manager', action });
         break;
       default: {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -93,7 +97,8 @@ export class ChatSyncService {
     switch (action.type) {
       case 'NEW_MESSAGES':
       case 'CHAT_UPDATED':
-        this._publish({ source: 'chat', action, instanceId: this.instanceId });
+      case 'CLOSE_WATCHERS_BY_META_KEY':
+        this._publish({ source: 'chat', action });
         break;
       default:
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -102,11 +107,13 @@ export class ChatSyncService {
   }
 
   _subscribeHandler(data: SyncData) {
-    if (data.source === 'manager') {
-      switch (data.action.type) {
+    const { source, action } = data;
+
+    if (source === 'manager') {
+      switch (action.type) {
         case 'CHAT_LIST_UPDATED':
-          data.action.payload.deletedChatsIds.forEach((chatId) => this._chatsManager.deleteChat(chatId, { isSyncAction: true }));
-          data.action.payload.newChats.forEach(({ id }) => {
+          action.payload.deletedChatsIds.forEach((chatId) => this._chatsManager.deleteChat(chatId, { isSyncAction: true }));
+          action.payload.newChats.forEach(({ id }) => {
             const chat = Chat.restoreChat(id);
             chat.subscribe('*', this._chatHandler.bind(this));
             this._chatsManager.addChat(chat, { isSyncAction: true });
@@ -114,19 +121,27 @@ export class ChatSyncService {
           break;
         case 'CHAT_UPDATED':
           break;
-        default:
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const exhaustiveCheck: never = data.action;
-      }
-    } else if (data.source === 'chat') {
-      switch (data.action.type) {
-        case 'NEW_MESSAGES':
-        case 'CHAT_UPDATED':
-          this._chatsManager.getChat(data.action.payload.chatId)?._broadcast(data.action.type, data.action.payload, { isSyncAction: true });
+        case 'CLOSE_WATCHERS_BY_META_KEY':
+          this._chatsManager.closeWatchersByMetaKey(action.payload.key, action.payload.value);
           break;
         default:
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const exhaustiveCheck: never = data.action;
+          const exhaustiveCheck: never = action;
+      }
+    } else if (source === 'chat') {
+      const chat = this._chatsManager.getChat(action.payload.chatId);
+
+      switch (action.type) {
+        case 'NEW_MESSAGES':
+        case 'CHAT_UPDATED':
+          chat?._broadcast(action.type, action.payload, { isSyncAction: true });
+          break;
+        case 'CLOSE_WATCHERS_BY_META_KEY':
+          chat?.closeWatchersByMetaKey(action.payload.key, action.payload.value);
+          break;
+        default:
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const exhaustiveCheck: never = action;
       }
     }
   }
