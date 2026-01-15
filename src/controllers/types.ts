@@ -16,5 +16,5 @@ export interface WatchChatsPayload {
   updatedChats: Chat[];
 }
 
-export type { AuthData } from '@/services/user';
+export type { AuthData, UserProfile } from '@/services/user';
 export type { TokenPair } from '@/services/token';

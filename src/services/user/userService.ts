@@ -8,6 +8,7 @@ import type { TokenPair } from '@/services/token';
 import { UserDto } from './userDto';
 import { DEFAULT_USER_SETTINGS } from './const';
 import type { AuthData } from './types';
+import {UserProfile} from "./types";
 
 export class UserService {
   async registration(username: string, password: string): Promise<AuthData> {
@@ -83,6 +84,15 @@ export class UserService {
     await tokenModel.deleteToken(refreshToken);
     manager.closeWatchersByMetaKey('sessionId', data.sessionId);
     manager.chats.forEach((chat) => chat.closeWatchersByMetaKey('sessionId', data.sessionId));
+  }
+
+  async getUserProfile(id: string): Promise<UserProfile> {
+    const user = await userModel.getUser(id);
+
+    return {
+      id: user?.id || id,
+      username: user?.username || '',
+    };
   }
 }
 

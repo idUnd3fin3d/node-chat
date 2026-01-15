@@ -12,3 +12,4 @@ export { quitChat } from './quitChat';
 export { subscribeChat } from './subscribeChat';
 export { getUser } from './getUser';
 export { editUser } from './editUser';
+export { getUserProfile } from './getUserProfile';
