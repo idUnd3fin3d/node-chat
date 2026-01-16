@@ -11,16 +11,14 @@ export class Message {
   id: string;
   text: string | null;
   fromId: string;
-  fromName: string | null;
   date: number;
   service: number | null;
   index: number;
 
-  constructor(text: string | null, fromId: string, fromName: string, service?: number) {
+  constructor(text: string | null, fromId: string, service?: number) {
     this.id = nanoid();
     this.text = text;
     this.fromId = fromId;
-    this.fromName = fromName;
     this.service = service ?? null;
     this.date = moment().valueOf();
     this.index = -1;

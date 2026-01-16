@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
 import { chatsModel } from '@/model/chats';
 import type { Message as MessageType, Chat as ChatType } from '@/model/chats';
-import { userModel } from '@/model/user';
 import { MESSAGES_PAGE_SIZE } from '@/const/limits';
 import { Subscribable } from './subscribable';
 import { Message, SERVICE_TYPES } from './message';
@@ -46,8 +45,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
       let messages: MessageType[] = [];
 
       if (creatorId) {
-        const user = await userModel.getUser(creatorId);
-        messages = [new Message(null, creatorId, user?.username || '', SERVICE_TYPES.CHAT_CREATED).setIndex(0)];
+        messages = [new Message(null, creatorId, SERVICE_TYPES.CHAT_CREATED).setIndex(0)];
       }
 
       await chatsModel.createChat({
@@ -88,8 +86,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
     await chatsModel.addUserToChat(this.id, userId);
 
     this._broadcast(CHAT_SUBSCRIBE_TYPES.CHAT_UPDATED, { chatId: this.id, onlyForJoined: true });
-    const user = await userModel.getUser(userId);
-    const message = new Message(null, userId, user?.username || '', SERVICE_TYPES.CHAT_JOINED);
+    const message = new Message(null, userId, SERVICE_TYPES.CHAT_JOINED);
     await this._addMessage(message);
 
     return true;
@@ -97,8 +94,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
 
   async publish(text: string, fromId: UserId): Promise<MessageType | null> {
     if (await this.isJoined(fromId)) {
-      const user = await userModel.getUser(fromId);
-      const message = new Message(text, fromId, user?.username || '');
+      const message = new Message(text, fromId);
       return this._addMessage(message);
     }
 
@@ -112,8 +108,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
       this.closeWatchersByMetaKey('userId', userId);
 
       this._broadcast(CHAT_SUBSCRIBE_TYPES.CHAT_UPDATED, { chatId: this.id, onlyForJoined: true });
-      const user = await userModel.getUser(userId);
-      const message = new Message(null, userId, user?.username || '', SERVICE_TYPES.CHAT_LEFT);
+      const message = new Message(null, userId, SERVICE_TYPES.CHAT_LEFT);
       await this._addMessage(message);
 
       return chatsModel.getChatJoinedUsersCount(this.id);

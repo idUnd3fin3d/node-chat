@@ -2,7 +2,6 @@ export interface Message {
   id: string;
   text: string | null;
   fromId: string;
-  fromName: string | null;
   date: number;
   service: number | null;
   index: number;
