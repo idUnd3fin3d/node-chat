@@ -19,6 +19,7 @@ import {
   logout,
   refreshToken,
   MESSAGES_DIRECTIONS,
+  getUserProfile,
 } from '@/controllers/api';
 import { MAX_MESSAGE_LENGTH } from '@/const/limits';
 
@@ -31,6 +32,7 @@ router.post('/auth/refresh', cookie('refreshToken').isString(), asyncHandler(ref
 
 router.post('/user', authMiddleware, getNameChain('username'), ...getSettingsChains(), asyncHandler(editUser));
 router.get('/user', authMiddleware, asyncHandler(getUser));
+router.get('/user-profile', authMiddleware, getIdChain('userId', 'query'), asyncHandler(getUserProfile));
 router.post('/chats', authMiddleware, getNameChain('name'), asyncHandler(createChat));
 router.get('/chats', authMiddleware, asyncHandler(getChats));
 router.get('/chats-subscribe', authMiddleware, asyncHandler(chatsSubscribe));

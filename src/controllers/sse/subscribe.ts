@@ -24,8 +24,6 @@ export const subscribeSSE: RequestHandler<Record<string, never>, string, GetInpu
     throw new ChatNotFound();
   }
 
-  res.write('retry: 10000\n\n');
-
   const writeToUser = (data: SSEData) => {
     res.write(`data: ${JSON.stringify(data)}\nid: ${data.messages[data.messages.length - 1].id}\n\n`);
   };
@@ -54,9 +52,11 @@ export const subscribeSSE: RequestHandler<Record<string, never>, string, GetInpu
   );
 
   if (watcherId !== null) {
-    res.on('close', () => {
+    const onClose = () => {
       chat.unsubscribe(watcherId as string);
-    });
+    };
+    res.on('close', onClose);
+    res.on('error', onClose);
   } else {
     throw new NotJoinedChat();
   }

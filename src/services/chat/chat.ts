@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
 import { chatsModel } from '@/model/chats';
 import type { Message as MessageType, Chat as ChatType } from '@/model/chats';
-import { userModel } from '@/model/user';
 import { MESSAGES_PAGE_SIZE } from '@/const/limits';
 import { Subscribable } from './subscribable';
 import { Message, SERVICE_TYPES } from './message';
@@ -10,6 +9,7 @@ import type { UserId, WatcherId, SubscribeAction, CallbackForAction, WildcardSub
 export const CHAT_SUBSCRIBE_TYPES = {
   NEW_MESSAGES: 'NEW_MESSAGES',
   CHAT_UPDATED: 'CHAT_UPDATED',
+  CLOSE_WATCHERS_BY_META_KEY: 'CLOSE_WATCHERS_BY_META_KEY',
 } as const;
 type ChatSubscribeTypes = typeof CHAT_SUBSCRIBE_TYPES;
 
@@ -22,7 +22,11 @@ export type ChatChatUpdatedSubscribeAction = SubscribeAction<
   ChatSubscribeTypes['CHAT_UPDATED'],
   CommonPayload & { onlyForJoined: boolean }
 >;
-export type ChatSubscribeActions = ChatNewMessagesSubscribeAction | ChatChatUpdatedSubscribeAction;
+export type ChatCloseWatchersByMetaKeyAction = SubscribeAction<
+  ChatSubscribeTypes['CLOSE_WATCHERS_BY_META_KEY'],
+  CommonPayload & { key: keyof WatcherMeta; value: string }
+>;
+export type ChatSubscribeActions = ChatNewMessagesSubscribeAction | ChatChatUpdatedSubscribeAction | ChatCloseWatchersByMetaKeyAction;
 
 export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
   id: string;
@@ -41,8 +45,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
       let messages: MessageType[] = [];
 
       if (creatorId) {
-        const user = await userModel.getUser(creatorId);
-        messages = [new Message(null, creatorId, user?.username || '', SERVICE_TYPES.CHAT_CREATED).setIndex(0)];
+        messages = [new Message(null, creatorId, SERVICE_TYPES.CHAT_CREATED).setIndex(0)];
       }
 
       await chatsModel.createChat({
@@ -83,8 +86,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
     await chatsModel.addUserToChat(this.id, userId);
 
     this._broadcast(CHAT_SUBSCRIBE_TYPES.CHAT_UPDATED, { chatId: this.id, onlyForJoined: true });
-    const user = await userModel.getUser(userId);
-    const message = new Message(null, userId, user?.username || '', SERVICE_TYPES.CHAT_JOINED);
+    const message = new Message(null, userId, SERVICE_TYPES.CHAT_JOINED);
     await this._addMessage(message);
 
     return true;
@@ -92,8 +94,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
 
   async publish(text: string, fromId: UserId): Promise<MessageType | null> {
     if (await this.isJoined(fromId)) {
-      const user = await userModel.getUser(fromId);
-      const message = new Message(text, fromId, user?.username || '');
+      const message = new Message(text, fromId);
       return this._addMessage(message);
     }
 
@@ -107,8 +108,7 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
       this.closeWatchersByMetaKey('userId', userId);
 
       this._broadcast(CHAT_SUBSCRIBE_TYPES.CHAT_UPDATED, { chatId: this.id, onlyForJoined: true });
-      const user = await userModel.getUser(userId);
-      const message = new Message(null, userId, user?.username || '', SERVICE_TYPES.CHAT_LEFT);
+      const message = new Message(null, userId, SERVICE_TYPES.CHAT_LEFT);
       await this._addMessage(message);
 
       return chatsModel.getChatJoinedUsersCount(this.id);
@@ -177,6 +177,12 @@ export class Chat extends Subscribable<ChatSubscribeActions, WatcherMeta> {
     }
 
     return await chatsModel.getMessagesSlice(this.id, -pageSize);
+  }
+
+  closeWatchersByMetaKey(key: keyof WatcherMeta, value: string): void {
+    this._broadcast(CHAT_SUBSCRIBE_TYPES.CLOSE_WATCHERS_BY_META_KEY, { chatId: this.id, key, value });
+
+    return super.closeWatchersByMetaKey(key, value);
   }
 
   async _closeChat(): Promise<void> {

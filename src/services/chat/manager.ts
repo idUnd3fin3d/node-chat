@@ -8,6 +8,7 @@ import type { UserId, SubscribeAction, ChatEntity, WatcherMeta } from './types';
 export const MANAGER_SUBSCRIBE_TYPES = {
   CHAT_LIST_UPDATED: 'CHAT_LIST_UPDATED',
   CHAT_UPDATED: 'CHAT_UPDATED',
+  CLOSE_WATCHERS_BY_META_KEY: 'CLOSE_WATCHERS_BY_META_KEY',
 } as const;
 type ManagerSubscribeTypes = typeof MANAGER_SUBSCRIBE_TYPES;
 
@@ -19,7 +20,14 @@ export type ManagerChatUpdatedSubscribeAction = SubscribeAction<
   ManagerSubscribeTypes['CHAT_UPDATED'],
   ChatChatUpdatedSubscribeAction['payload']
 >;
-export type ManagerSubscribeActions = ManagerChatListUpdatedSubscribeAction | ManagerChatUpdatedSubscribeAction;
+export type ManagerCloseWatchersByMetaKeyAction = SubscribeAction<
+  ManagerSubscribeTypes['CLOSE_WATCHERS_BY_META_KEY'],
+  { key: keyof WatcherMeta; value: string }
+>;
+export type ManagerSubscribeActions =
+  | ManagerChatListUpdatedSubscribeAction
+  | ManagerChatUpdatedSubscribeAction
+  | ManagerCloseWatchersByMetaKeyAction;
 
 export class Manager extends Subscribable<ManagerSubscribeActions, WatcherMeta> {
   chats: Chat[] = [];
@@ -85,6 +93,12 @@ export class Manager extends Subscribable<ManagerSubscribeActions, WatcherMeta> 
     const isJoined = await Promise.all(chats.map((chat) => chat.isJoined(userId)));
 
     return chats.filter((chat, index) => isJoined[index]);
+  }
+
+  closeWatchersByMetaKey(key: keyof WatcherMeta, value: string): void {
+    this._broadcast(MANAGER_SUBSCRIBE_TYPES.CLOSE_WATCHERS_BY_META_KEY, { key, value });
+
+    return super.closeWatchersByMetaKey(key, value);
   }
 }
 

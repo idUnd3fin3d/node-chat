@@ -8,10 +8,12 @@ type SSEData = WatchChatsPayload;
 export const chatsSubscribeSSE: RequestHandler<Record<string, never>, string> = (req, res) => {
   const { id: userId, sessionId } = getTokenData(req);
 
-  res.on('close', () => {
+  const onClose = () => {
     manager.unsubscribe(defaultWatcherId);
     manager.unsubscribe(chatUpdatedWatcherId);
-  });
+  };
+  res.on('close', onClose);
+  res.on('error', onClose);
 
   const writeToUser = (data: SSEData) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
