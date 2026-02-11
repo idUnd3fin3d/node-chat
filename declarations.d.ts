@@ -1,5 +1,5 @@
 import type { JwtPayload } from 'jsonwebtoken';
-import type { UserDto } from '@/services/user';
+import type { UserDto } from './src/services/user';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

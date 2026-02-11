@@ -11,7 +11,6 @@ import { router as apiRouter } from '@/routes/api';
 import { router as sseRouter } from '@/routes/sse';
 import { manager } from '@/services/chat';
 import { ChatSyncService } from '@/services/chatSync';
-import './types';
 
 const app = express();
 const { app: wsApp } = expressWs(app);

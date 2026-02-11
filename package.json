@@ -1,7 +1,7 @@
 {
   "name": "chat",
   "version": "1.0.0",
-  "description": "simple http-pooling chat",
+  "description": "simple chat",
   "homepage": "https://github.com/yxxr1/node-chat",
   "author": "yxxr1",
   "repository": {
@@ -10,7 +10,7 @@
   },
   "main": "src/index.ts",
   "scripts": {
-    "start": "nodemon src/index.ts",
+    "start": "nodemon --files src/index.ts",
     "build": "tsc && tsc-alias",
     "eslint": "eslint ./src --ext .ts",
     "eslint-fix": "eslint ./src --ext .ts --fix"
