@@ -8,7 +8,7 @@ import type { TokenPair } from '@/services/token';
 import { UserDto } from './userDto';
 import { DEFAULT_USER_SETTINGS } from './const';
 import type { AuthData } from './types';
-import {UserProfile} from "./types";
+import type { UserProfile } from './types';
 
 export class UserService {
   async registration(username: string, password: string): Promise<AuthData> {
